@@ -1,0 +1,1 @@
+docker build -t pco2699/9cc .

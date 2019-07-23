@@ -22,6 +22,23 @@ struct Token {
 
 Token *token;
 
+// 入力プログラム
+char *user_input;
+
+// エラー箇所を報告する
+void error_at(char *loc, char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int pos = loc - user_input;
+  fprintf(stderr, "%s\n", user_input);
+  fprintf(stderr, "%*s", pos, ""); // pos個の空白を出力
+  fprintf(stderr, "^ ");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
 void error(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -39,13 +56,13 @@ bool consume(char op) {
 
 void expect(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op)
-    error("'%c'ではありません", op);
-    token = token->next;
+    error_at(token->str, "'%c'ではありません", op);
+  token = token->next;
 }
 
 int expect_number(){
   if (token->kind != TK_NUM)
-    error("数ではありません");
+    error_at(token->str, "数ではありません");
   int val = token->val;
   token = token->next;
   return val;
@@ -80,10 +97,11 @@ Token *tokenize(char *p) {
 
     if (isdigit(*p)) {
       cur = new_token(TK_NUM, cur, p++);
+      cur->val = strtol(p, &p, 10);
       continue;
     }
 
-    error("トークナイズできません");
+    error_at(token->str, "トークナイズできません");
   }
   new_token(TK_EOF, cur, p);
   return head.next;
@@ -96,28 +114,21 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  char *p = argv[1];
+  token = tokenize(argv[1]);
+  user_input = argv[1];
 
   printf(".intel_syntax noprefix\n");
   printf(".global main\n");
   printf("main:\n");
-  printf("  mov rax, %d\n", strtol(p, &p, 10));
+  printf("  mov rax, %d\n", expect_number());
 
-  while (*p) {
-    if (*p == '+') {
-      p++;
-      printf("  add rax, %ld\n", strtol(p, &p, 10));
+  while (!at_eof()) {
+    if (consume('+')) {
+      printf("  add rax, %d\n", expect_number());
       continue;
     }
-
-    if (*p == '-') {
-      p++;
-      printf("  sub rax, %ld\n", strtol(p, &p, 10));
-      continue;
-    }
-
-    fprintf(stderr, "予期しない文字です: '%c'\n", *p);
-    return 1;
+    expect('-');
+    printf("  sub rax, %d\n", expect_number());
   }
 
   printf("  ret\n");

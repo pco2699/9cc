@@ -52,6 +52,7 @@ Node *new_node_num(int val) {
   return node;
 }
 
+Node *expr();
 Token *token;
 
 // 入力プログラム
@@ -121,10 +122,15 @@ Token *tokenize(char *p) {
       p++;
       continue;
     }
-
-    if (((*p == '+' || *p == '-') || *p == '*' ) || *p == '/') {
-      cur = new_token(TK_RESERVED, cur, p++);
-      continue;
+    switch(*p) {
+      case '+':
+      case '-':
+      case '*':
+      case '/':
+      case '(':
+      case ')':
+        cur = new_token(TK_RESERVED, cur, p++);
+        continue;
     }
 
     if (isdigit(*p)) {
@@ -171,13 +177,23 @@ void gen(Node *node) {
 
 }
 
+Node *primary() {
+  if (consume('(')){
+    Node *node = expr();
+    expect(')');
+    return node;
+  }
+
+  return new_node_num(expect_number());
+}
+
 Node *mul() {
-  Node *node = new_node_num(expect_number());
+  Node *node = primary();
   for (;;) {
     if (consume('*'))
-      node = new_node(ND_MUL, node, new_node_num(expect_number()));
+      node = new_node(ND_MUL, node, primary());
     else if (consume('/'))
-      node = new_node(ND_DIV, node, new_node_num(expect_number()));
+      node = new_node(ND_DIV, node, primary());
     else
       return node;
   }

@@ -13,4 +13,11 @@ test: 9cc
 clean:
 		rm -f 9cc *.o *~ tmp*
 
-.PHONY: test clean
+docker-build:
+		docker build -t pco2699/9cc .
+
+docker-run:
+		docker run --rm -it -v $(CURDIR):/app pco2699/9cc ash
+
+
+.PHONY: test clean docker-build docker-run
